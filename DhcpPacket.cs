@@ -37,12 +37,19 @@ namespace SimpleDhcpServer
         public IPAddress ServerIp = IPAddress.Any;   // siaddr
         public IPAddress GatewayIp = IPAddress.Any;  // giaddr
         public byte[] ClientMac = new byte[6];
-        public Dictionary<byte, byte[]> Options { get; } = new();
+        public Dictionary<byte, byte[]> Options { get; } = new Dictionary<byte, byte[]>();
 
         public bool IsBroadcast => (Flags & 0x8000) != 0;
 
-        public DhcpMessageType? MessageType =>
-            Options.TryGetValue(53, out var v) && v.Length == 1 ? (DhcpMessageType)v[0] : null;
+        public DhcpMessageType? MessageType
+        {
+            get
+            {
+                if (Options.TryGetValue(53, out var v) && v.Length == 1)
+                    return (DhcpMessageType)v[0];
+                return null;
+            }
+        }
 
         public string? RequestedHostName =>
             Options.TryGetValue(12, out var v) ? Encoding.ASCII.GetString(v) : null;
@@ -88,7 +95,12 @@ namespace SimpleDhcpServer
 
         public byte[] ToBytes()
         {
-            var buf = new byte[300];
+            // 240-byte fixed part (header + magic cookie), then options, then the End marker;
+            // BOOTP requires at least 300 bytes in total.
+            int optionsLength = 0;
+            foreach (var kv in Options)
+                optionsLength += 2 + kv.Value.Length;
+            var buf = new byte[Math.Max(300, 240 + optionsLength + 1)];
             buf[0] = Op;
             buf[1] = HType;
             buf[2] = HLen;
@@ -115,11 +127,15 @@ namespace SimpleDhcpServer
             }
             buf[idx++] = 255; // End option
 
-            return buf.AsSpan(0, Math.Max(idx, 300)).ToArray();
+            return buf;
         }
 
-        private static byte[] Slice(byte[] data, int offset, int count) =>
-            new ArraySegment<byte>(data, offset, count).ToArray();
+        private static byte[] Slice(byte[] data, int offset, int count)
+        {
+            var result = new byte[count];
+            Buffer.BlockCopy(data, offset, result, 0, count);
+            return result;
+        }
 
         private static uint ReadUInt32(byte[] d, int o) =>
             (uint)((d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3]);

@@ -11,7 +11,8 @@ namespace SimpleDhcpServer
     public class MainForm : Form
     {
         private readonly DhcpServer _server = new();
-        private readonly Timer _refreshTimer = new() { Interval = 2000 };
+        // Fully qualified: ImplicitUsings also imports System.Threading, which has its own Timer
+        private readonly System.Windows.Forms.Timer _refreshTimer = new() { Interval = 2000 };
 
         private readonly ComboBox _cmbInterface = new();
         private readonly Button _btnRefreshInterfaces = new();

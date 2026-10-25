@@ -57,14 +57,15 @@ SimpleDhcpServer/
 GitHub Actions poskytuje běžce `windows-latest` zdarma (u veřejných repozitářů
 neomezeně, u soukromých v rámci měsíčního limitu minut).
 
-## Lokální build (pokud máte Windows + .NET 8 SDK)
+## Lokální build (pokud máte Windows + .NET SDK)
 
 ```
-dotnet publish SimpleDhcpServer/SimpleDhcpServer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+dotnet publish SimpleDhcpServer/SimpleDhcpServer.csproj -c Release -o publish
 ```
 
-Výsledný `publish/SimpleDhcpServer.exe` je samostatný soubor, nevyžaduje
-instalaci .NET runtime na cílovém stroji.
+Projekt cílí na **.NET Framework 4.8**, který je součástí Windows 10 (od verze
+1903) i Windows 11. Výsledný `publish/SimpleDhcpServer.exe` má jen desítky kB
+a na cílovém stroji nevyžaduje instalaci žádného runtime.
 
 ## Poznámka k testování
 

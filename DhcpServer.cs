@@ -27,8 +27,8 @@ namespace SimpleDhcpServer
         private UdpClient? _udp;
         private CancellationTokenSource? _cts;
 
-        public LeaseManager Leases { get; } = new();
-        public DhcpServerConfig Config { get; private set; } = new();
+        public LeaseManager Leases { get; } = new LeaseManager();
+        public DhcpServerConfig Config { get; private set; } = new DhcpServerConfig();
         public bool IsRunning { get; private set; }
         public event Action<string>? Log;
 
@@ -48,7 +48,9 @@ namespace SimpleDhcpServer
             _cts = new CancellationTokenSource();
             IsRunning = true;
             Log?.Invoke("Server spuštěn, naslouchám na UDP/67…");
-            _ = Task.Run(() => ReceiveLoopAsync(_cts.Token));
+            var udp = _udp;
+            var token = _cts.Token;
+            _ = Task.Run(() => ReceiveLoopAsync(udp, token));
         }
 
         public void Stop()
@@ -61,18 +63,20 @@ namespace SimpleDhcpServer
             Log?.Invoke("Server zastaven.");
         }
 
-        private async Task ReceiveLoopAsync(CancellationToken token)
+        private async Task ReceiveLoopAsync(UdpClient udp, CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 UdpReceiveResult result;
                 try
                 {
-                    result = await _udp!.ReceiveAsync(token);
+                    // .NET Framework has no cancellable ReceiveAsync; Stop() closes the
+                    // socket instead, which makes this call throw and ends the loop.
+                    result = await udp.ReceiveAsync();
                 }
                 catch
                 {
-                    break; // socket closed / cancelled
+                    break; // socket closed
                 }
 
                 try

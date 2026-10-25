@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net;
@@ -246,12 +247,12 @@ namespace SimpleDhcpServer
             if (!string.IsNullOrWhiteSpace(_txtGateway.Text) && !IPAddress.TryParse(_txtGateway.Text.Trim(), out gateway))
             { error = "Neplatná adresa brány."; return false; }
 
-            var dnsList = _txtDns.Text
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => IPAddress.TryParse(s, out var ip) ? ip : null)
-                .Where(ip => ip != null)
-                .Select(ip => ip!)
-                .ToArray();
+            var dnsList = new List<IPAddress>();
+            foreach (var part in _txtDns.Text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (IPAddress.TryParse(part.Trim(), out var dnsIp))
+                    dnsList.Add(dnsIp);
+            }
 
             cfg = new DhcpServerConfig
             {
@@ -260,7 +261,7 @@ namespace SimpleDhcpServer
                 PoolEnd = poolEnd,
                 SubnetMask = mask,
                 Gateway = gateway,
-                DnsServers = dnsList,
+                DnsServers = dnsList.ToArray(),
                 LeaseTime = TimeSpan.FromHours((double)_numLeaseHours.Value)
             };
             error = "";

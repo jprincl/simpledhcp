@@ -30,9 +30,9 @@ jobs:
           Write-Host "Found project: $($proj.FullName)"
           "path=$($proj.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Publish (self-contained single-file exe)
+      - name: Publish (.NET Framework 4.8 exe)
         shell: pwsh
-        run: dotnet publish "${{ steps.locate.outputs.path }}" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+        run: dotnet publish "${{ steps.locate.outputs.path }}" -c Release -o publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

@@ -18,15 +18,24 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Locate project file
+        id: locate
+        shell: pwsh
+        run: |
+          # Find the .csproj wherever it ended up in the repository,
+          # so the build does not depend on the exact folder layout.
+          $proj = Get-ChildItem -Path . -Recurse -Filter SimpleDhcpServer.csproj | Select-Object -First 1
+          if (-not $proj) {
+            Write-Host "Repository contents (depth 3):"
+            Get-ChildItem -Recurse -Depth 3 | ForEach-Object { $_.FullName }
+            throw "SimpleDhcpServer.csproj not found in the repository"
+          }
+          Write-Host "Found project: $($proj.FullName)"
+          "path=$($proj.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Publish (self-contained single-file exe)
-        run: >
-          dotnet publish SimpleDhcpServer/SimpleDhcpServer.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -o publish
+        shell: pwsh
+        run: dotnet publish "${{ steps.locate.outputs.path }}" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -34,7 +43,7 @@ jobs:
           name: SimpleDhcpServer-exe
           path: publish/SimpleDhcpServer.exe
 
-      - name: Create GitHub Release (only for tags v*.*.*)
+      - name: Create GitHub Release (only for tags v*)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
